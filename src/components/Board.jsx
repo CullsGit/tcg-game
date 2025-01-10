@@ -28,6 +28,29 @@ const Board = () => {
     }
   }, [firstTurn, playerOneDeck, playerTwoDeck]);
 
+  // Function to draw a card with action limit and hand size limit enforcement
+  const handleDrawCard = (
+    playerHand,
+    setPlayerHand,
+    playerDeck,
+    setPlayerDeck,
+    actions,
+    setActions
+  ) => {
+    if (actions > 0 && playerDeck.length > 0) {
+      if (playerHand.length < 5) {
+        const newCard = playerDeck[0];
+        setPlayerHand([...playerHand, newCard]);
+        setPlayerDeck(playerDeck.slice(1));
+        setActions(actions - 1);
+      } else {
+        alert("Hand limit reached (5 cards)!");
+      }
+    } else {
+      alert("No actions remaining!");
+    }
+  };
+
   // Render a single player's board
   const renderBoard = (board) => (
     <div className="board-grid">
@@ -42,6 +65,21 @@ const Board = () => {
     <div className="game-board">
       <div className="player-section">
         <h2>Player 1</h2>
+        <p>Actions Remaining: {playerOneActions}</p>
+        <button
+          onClick={() =>
+            handleDrawCard(
+              playerOneHand,
+              setPlayerOneHand,
+              playerOneDeck,
+              setPlayerOneDeck,
+              playerOneActions,
+              setPlayerOneActions
+            )
+          }
+        >
+          Draw Card
+        </button>
         <div className="player-hand">
           <h4>Hand:</h4>
           {playerOneHand.map((card, index) => (
@@ -59,6 +97,21 @@ const Board = () => {
 
       <div className="player-section">
         <h2>Player 2</h2>
+        <p>Actions Remaining: {playerTwoActions}</p>
+        <button
+          onClick={() =>
+            handleDrawCard(
+              playerTwoHand,
+              setPlayerTwoHand,
+              playerTwoDeck,
+              setPlayerTwoDeck,
+              playerTwoActions,
+              setPlayerTwoActions
+            )
+          }
+        >
+          Draw Card
+        </button>
         <div className="player-hand">
           <h4>Hand:</h4>
           {playerTwoHand.map((card, index) => (
