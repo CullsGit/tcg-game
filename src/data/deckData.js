@@ -1,10 +1,10 @@
 // src/data/deckData.js
 export function createDeck() {
   const cardTypes = [
-    { type: "tank", color: "blue" },
-    { type: "damage", color: "red" },
-    { type: "speed", color: "green" },
-    { type: "healer", color: "yellow" },
+    { type: "Tank", color: "blue" },
+    { type: "Damage", color: "red" },
+    { type: "Speed", color: "green" },
+    { type: "Healer", color: "purple" },
   ];
 
   let deck = [];

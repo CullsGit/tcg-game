@@ -51,12 +51,65 @@ const Board = () => {
     }
   };
 
+  // Function to place a card on the board
+  const handlePlaceCard = (
+    playerHand,
+    setPlayerHand,
+    board,
+    setBoard,
+    slotIndex,
+    actions,
+    setActions
+  ) => {
+    if (actions > 0 && board[slotIndex] === null) {
+      const selectedCard = playerHand[0]; // Select the first card in hand to place
+      if (selectedCard) {
+        // Update board with placed card
+        const newBoard = [...board];
+        newBoard[slotIndex] = selectedCard;
+        setBoard(newBoard);
+
+        // Remove placed card from player's hand
+        setPlayerHand(playerHand.slice(1));
+
+        // Decrement action count
+        setActions(actions - 1);
+      }
+    } else if (board[slotIndex] !== null) {
+      alert("Slot already occupied!");
+    } else {
+      alert("No actions remaining!");
+    }
+  };
+
   // Render a single player's board
-  const renderBoard = (board) => (
+  const renderBoard = (
+    board,
+    playerHand,
+    setPlayerHand,
+    actions,
+    setActions,
+    setBoard
+  ) => (
     <div className="board-grid">
       {board.map((slot, index) => (
-        <div key={index} className="board-cell">
-          {slot ? `${slot.type} (${slot.color})` : `Slot ${index + 1}`}
+        <div
+          key={index}
+          className={`board-cell ${slot ? "occupied" : ""}`}
+          style={{ backgroundColor: slot ? slot.color : "transparent" }}
+          onClick={() =>
+            handlePlaceCard(
+              playerHand,
+              setPlayerHand,
+              board,
+              setBoard,
+              index,
+              actions,
+              setActions
+            )
+          }
+        >
+          {slot ? slot.type : `Slot ${index + 1}`}
         </div>
       ))}
     </div>
@@ -92,7 +145,14 @@ const Board = () => {
             </div>
           ))}
         </div>
-        {renderBoard(playerOneBoard)}
+        {renderBoard(
+          playerOneBoard,
+          playerOneHand,
+          setPlayerOneHand,
+          playerOneActions,
+          setPlayerOneActions,
+          setPlayerOneBoard
+        )}
       </div>
 
       <div className="player-section">
@@ -124,7 +184,14 @@ const Board = () => {
             </div>
           ))}
         </div>
-        {renderBoard(playerTwoBoard)}
+        {renderBoard(
+          playerTwoBoard,
+          playerTwoHand,
+          setPlayerTwoHand,
+          playerTwoActions,
+          setPlayerTwoActions,
+          setPlayerTwoBoard
+        )}
       </div>
     </div>
   );
