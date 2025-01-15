@@ -3,7 +3,7 @@ export function createDeck() {
   const cardTypes = [
     { type: "Tank", color: "blue" },
     { type: "Damage", color: "red" },
-    { type: "Speed", color: "green" },
+    { type: "Magic", color: "green" },
     { type: "Healer", color: "purple" },
   ];
 
