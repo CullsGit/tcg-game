@@ -2,197 +2,157 @@ import React, { useState, useEffect } from "react";
 import "./Board.css";
 import { createDeck } from "../data/deckData";
 
+const shuffleDeck = (deck) => {
+  return [...deck].sort(() => Math.random() - 0.5);
+};
+
 const Board = () => {
-  const [playerOneDeck, setPlayerOneDeck] = useState(createDeck());
-  const [playerTwoDeck, setPlayerTwoDeck] = useState(createDeck());
+  const initialPlayerState = () => ({
+    deck: shuffleDeck(createDeck()), // Unique shuffled deck for each player
+    hand: [],
+    board: Array(9).fill(null),
+    actions: 3,
+    selectedCardIndex: null,
+  });
 
-  const [playerOneHand, setPlayerOneHand] = useState([]);
-  const [playerTwoHand, setPlayerTwoHand] = useState([]);
-
-  const [playerOneActions, setPlayerOneActions] = useState(3);
-  const [playerTwoActions, setPlayerTwoActions] = useState(3);
+  const [players, setPlayers] = useState({
+    player1: initialPlayerState(),
+    player2: initialPlayerState(),
+  });
 
   const [firstTurn, setFirstTurn] = useState(true);
 
-  const [playerOneBoard, setPlayerOneBoard] = useState(Array(9).fill(null));
-  const [playerTwoBoard, setPlayerTwoBoard] = useState(Array(9).fill(null));
-
-  // Draw 3 cards at the start of the first turn
   useEffect(() => {
     if (firstTurn) {
-      setPlayerOneHand(playerOneDeck.slice(0, 3));
-      setPlayerOneDeck(playerOneDeck.slice(3));
-      setPlayerTwoHand(playerTwoDeck.slice(0, 3));
-      setPlayerTwoDeck(playerTwoDeck.slice(3));
+      drawInitialCards("player1");
+      drawInitialCards("player2");
       setFirstTurn(false);
     }
-  }, [firstTurn, playerOneDeck, playerTwoDeck]);
+  }, [firstTurn]);
 
-  // Function to draw a card with action limit and hand size limit enforcement
-  const handleDrawCard = (
-    playerHand,
-    setPlayerHand,
-    playerDeck,
-    setPlayerDeck,
-    actions,
-    setActions
-  ) => {
-    if (actions > 0 && playerDeck.length > 0) {
-      if (playerHand.length < 5) {
-        const newCard = playerDeck[0];
-        setPlayerHand([...playerHand, newCard]);
-        setPlayerDeck(playerDeck.slice(1));
-        setActions(actions - 1);
+  const drawInitialCards = (player) => {
+    setPlayers((prevPlayers) => {
+      const { deck } = prevPlayers[player];
+      const newDeck = deck.slice(3);
+      const newHand = deck.slice(0, 3);
+      return {
+        ...prevPlayers,
+        [player]: {
+          ...prevPlayers[player],
+          deck: newDeck,
+          hand: newHand,
+        },
+      };
+    });
+  };
+
+  const handleSelectCard = (player, index) => {
+    setPlayers((prevPlayers) => ({
+      ...prevPlayers,
+      [player]: {
+        ...prevPlayers[player],
+        selectedCardIndex: index,
+      },
+    }));
+  };
+
+  const handlePlaceCard = (player, slotIndex) => {
+    const currentPlayer = players[player];
+    const { hand, board, actions, selectedCardIndex } = currentPlayer;
+
+    if (
+      actions > 0 &&
+      board[slotIndex] === null &&
+      selectedCardIndex !== null
+    ) {
+      const selectedCard = hand[selectedCardIndex];
+      const newBoard = [...board];
+      newBoard[slotIndex] = selectedCard;
+
+      const newHand = [...hand];
+      newHand.splice(selectedCardIndex, 1);
+
+      setPlayers((prevPlayers) => ({
+        ...prevPlayers,
+        [player]: {
+          ...prevPlayers[player],
+          board: newBoard,
+          hand: newHand,
+          actions: actions - 1,
+          selectedCardIndex: null,
+        },
+      }));
+    } else {
+      alert(actions === 0 ? "No actions remaining!" : "Invalid move!");
+    }
+  };
+
+  const handleDrawCard = (player) => {
+    setPlayers((prevPlayers) => {
+      const currentPlayer = prevPlayers[player];
+      const { deck, hand, actions } = currentPlayer;
+
+      if (actions > 0 && deck.length > 0 && hand.length < 5) {
+        const newCard = deck[0];
+        return {
+          ...prevPlayers,
+          [player]: {
+            ...currentPlayer,
+            hand: [...hand, newCard],
+            deck: deck.slice(1),
+            actions: actions - 1,
+          },
+        };
       } else {
-        alert("Hand limit reached (5 cards)!");
+        alert(actions === 0 ? "No actions remaining!" : "Hand limit reached!");
+        return prevPlayers;
       }
-    } else {
-      alert("No actions remaining!");
-    }
+    });
   };
 
-  // Function to place a card on the board
-  const handlePlaceCard = (
-    playerHand,
-    setPlayerHand,
-    board,
-    setBoard,
-    slotIndex,
-    actions,
-    setActions
-  ) => {
-    if (actions > 0 && board[slotIndex] === null) {
-      const selectedCard = playerHand[0]; // Select the first card in hand to place
-      if (selectedCard) {
-        // Update board with placed card
-        const newBoard = [...board];
-        newBoard[slotIndex] = selectedCard;
-        setBoard(newBoard);
-
-        // Remove placed card from player's hand
-        setPlayerHand(playerHand.slice(1));
-
-        // Decrement action count
-        setActions(actions - 1);
-      }
-    } else if (board[slotIndex] !== null) {
-      alert("Slot already occupied!");
-    } else {
-      alert("No actions remaining!");
-    }
-  };
-
-  // Render a single player's board
-  const renderBoard = (
-    board,
-    playerHand,
-    setPlayerHand,
-    actions,
-    setActions,
-    setBoard
-  ) => (
-    <div className="board-grid">
-      {board.map((slot, index) => (
-        <div
-          key={index}
-          className={`board-cell ${slot ? "occupied" : ""}`}
-          style={{ backgroundColor: slot ? slot.color : "transparent" }}
-          onClick={() =>
-            handlePlaceCard(
-              playerHand,
-              setPlayerHand,
-              board,
-              setBoard,
-              index,
-              actions,
-              setActions
-            )
-          }
-        >
-          {slot ? slot.type : `Slot ${index + 1}`}
+  const renderPlayerSection = (playerKey) => {
+    const player = players[playerKey];
+    return (
+      <div className="player-section">
+        <h2>{playerKey === "player1" ? "Player 1" : "Player 2"}</h2>
+        <p>Actions Remaining: {player.actions}</p>
+        <button onClick={() => handleDrawCard(playerKey)}>Draw Card</button>
+        <div className="player-hand">
+          <h4>Hand:</h4>
+          {player.hand.map((card, index) => (
+            <div
+              key={index}
+              className={`card ${
+                player.selectedCardIndex === index ? "selected" : ""
+              }`}
+              style={{ backgroundColor: card.color }}
+              onClick={() => handleSelectCard(playerKey, index)}
+            >
+              {card.type}
+            </div>
+          ))}
         </div>
-      ))}
-    </div>
-  );
+        <div className="board-grid">
+          {player.board.map((slot, index) => (
+            <div
+              key={index}
+              className={`board-cell ${slot ? "occupied" : ""}`}
+              style={{ backgroundColor: slot ? slot.color : "transparent" }}
+              onClick={() => handlePlaceCard(playerKey, index)}
+            >
+              {slot ? slot.type : `Slot ${index + 1}`}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="game-board">
-      <div className="player-section">
-        <h2>Player 1</h2>
-        <p>Actions Remaining: {playerOneActions}</p>
-        <button
-          onClick={() =>
-            handleDrawCard(
-              playerOneHand,
-              setPlayerOneHand,
-              playerOneDeck,
-              setPlayerOneDeck,
-              playerOneActions,
-              setPlayerOneActions
-            )
-          }
-        >
-          Draw Card
-        </button>
-        <div className="player-hand">
-          <h4>Hand:</h4>
-          {playerOneHand.map((card, index) => (
-            <div
-              key={index}
-              className="card"
-              style={{ backgroundColor: card.color }}
-            >
-              {card.type}
-            </div>
-          ))}
-        </div>
-        {renderBoard(
-          playerOneBoard,
-          playerOneHand,
-          setPlayerOneHand,
-          playerOneActions,
-          setPlayerOneActions,
-          setPlayerOneBoard
-        )}
-      </div>
-
-      <div className="player-section">
-        <h2>Player 2</h2>
-        <p>Actions Remaining: {playerTwoActions}</p>
-        <button
-          onClick={() =>
-            handleDrawCard(
-              playerTwoHand,
-              setPlayerTwoHand,
-              playerTwoDeck,
-              setPlayerTwoDeck,
-              playerTwoActions,
-              setPlayerTwoActions
-            )
-          }
-        >
-          Draw Card
-        </button>
-        <div className="player-hand">
-          <h4>Hand:</h4>
-          {playerTwoHand.map((card, index) => (
-            <div
-              key={index}
-              className="card"
-              style={{ backgroundColor: card.color }}
-            >
-              {card.type}
-            </div>
-          ))}
-        </div>
-        {renderBoard(
-          playerTwoBoard,
-          playerTwoHand,
-          setPlayerTwoHand,
-          playerTwoActions,
-          setPlayerTwoActions,
-          setPlayerTwoBoard
-        )}
-      </div>
+      {["player1", "player2"].map((playerKey) =>
+        renderPlayerSection(playerKey)
+      )}
     </div>
   );
 };
