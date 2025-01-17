@@ -11,7 +11,7 @@ const Board = () => {
     deck: shuffleDeck(createDeck()),
     hand: [],
     board: Array(9).fill(null),
-    actions: 900,
+    actions: 3,
     selectedCardIndex: null,
     selectedBoardIndex: null, // Tracks selected card on board for movement
   });
@@ -21,6 +21,7 @@ const Board = () => {
     player2: initialPlayerState(),
   });
 
+  const [currentTurn, setCurrentTurn] = useState("player1"); // Player 1 starts
   const [firstTurn, setFirstTurn] = useState(true);
 
   useEffect(() => {
@@ -30,6 +31,12 @@ const Board = () => {
       setFirstTurn(false);
     }
   }, [firstTurn]);
+
+  useEffect(() => {
+    if (players[currentTurn].actions === 0) {
+      setTimeout(endTurn, 500); // Delay for clarity
+    }
+  }, [players, currentTurn]);
 
   const drawInitialCards = (player) => {
     setPlayers((prevPlayers) => {
@@ -48,6 +55,8 @@ const Board = () => {
   };
 
   const handleSelectCard = (player, index) => {
+    if (player !== currentTurn) return; // Block interaction for other player
+
     setPlayers((prevPlayers) => ({
       ...prevPlayers,
       [player]: {
@@ -60,6 +69,8 @@ const Board = () => {
   };
 
   const handleSelectBoardCard = (player, index) => {
+    if (player !== currentTurn) return; // Block interaction for other player
+
     setPlayers((prevPlayers) => ({
       ...prevPlayers,
       [player]: {
@@ -72,37 +83,42 @@ const Board = () => {
   };
 
   const handlePlaceCard = (player, slotIndex) => {
-    const currentPlayer = players[player];
-    const { hand, board, actions, selectedCardIndex } = currentPlayer;
+    if (player !== currentTurn) return; // Block interaction for other player
 
-    if (
-      actions > 0 &&
-      board[slotIndex] === null &&
-      selectedCardIndex !== null
-    ) {
-      const selectedCard = hand[selectedCardIndex];
-      const newBoard = [...board];
-      newBoard[slotIndex] = selectedCard;
+    setPlayers((prevPlayers) => {
+      const currentPlayer = prevPlayers[player];
+      const { hand, board, actions, selectedCardIndex } = currentPlayer;
 
-      const newHand = [...hand];
-      newHand.splice(selectedCardIndex, 1);
+      if (
+        actions > 0 &&
+        board[slotIndex] === null &&
+        selectedCardIndex !== null
+      ) {
+        const selectedCard = hand[selectedCardIndex];
+        const newBoard = [...board];
+        newBoard[slotIndex] = selectedCard;
 
-      setPlayers((prevPlayers) => ({
-        ...prevPlayers,
-        [player]: {
-          ...prevPlayers[player],
-          board: newBoard,
-          hand: newHand,
-          actions: actions - 1,
-          selectedCardIndex: null,
-        },
-      }));
-    } else {
-      alert(actions === 0 ? "No actions remaining!" : "Invalid move!");
-    }
+        const newHand = [...hand];
+        newHand.splice(selectedCardIndex, 1);
+
+        return {
+          ...prevPlayers,
+          [player]: {
+            ...currentPlayer,
+            board: newBoard,
+            hand: newHand,
+            actions: actions - 1,
+            selectedCardIndex: null,
+          },
+        };
+      }
+      return prevPlayers;
+    });
   };
 
   const handleMoveCard = (player, newIndex) => {
+    if (player !== currentTurn) return; // Block interaction for other player
+
     setPlayers((prevPlayers) => {
       const currentPlayer = prevPlayers[player];
       const { board, actions, selectedBoardIndex } = currentPlayer;
@@ -181,18 +197,52 @@ const Board = () => {
     return moves;
   };
 
+  const endTurn = () => {
+    setPlayers((prevPlayers) => {
+      const nextTurn = currentTurn === "player1" ? "player2" : "player1";
+      return {
+        ...prevPlayers,
+        [nextTurn]: {
+          ...prevPlayers[nextTurn],
+          actions: 3, // Reset actions for the new turn
+        },
+      };
+    });
+
+    setCurrentTurn((prevTurn) =>
+      prevTurn === "player1" ? "player2" : "player1"
+    );
+  };
+
   const renderPlayerSection = (playerKey) => {
     const player = players[playerKey];
+    const isPlayerTurn = playerKey === currentTurn;
+
     const availableMoves =
       player.selectedBoardIndex !== null
         ? getAvailableMoves(player.board, player.selectedBoardIndex)
         : [];
 
     return (
-      <div className="player-section">
+      <div
+        className={`player-section ${
+          isPlayerTurn ? "active-turn" : "inactive-turn"
+        }`}
+      >
         <h2>{playerKey === "player1" ? "Player 1" : "Player 2"}</h2>
         <p>Actions Remaining: {player.actions}</p>
-        <button onClick={() => handleDrawCard(playerKey)}>Draw Card</button>
+        <p>{isPlayerTurn ? "Your Turn" : "Waiting for Opponent..."}</p>
+
+        {/* Disable Draw Button when not their turn */}
+        <button
+          onClick={() => isPlayerTurn && handleDrawCard(playerKey)}
+          disabled={!isPlayerTurn}
+          style={{ opacity: isPlayerTurn ? 1 : 0.5 }}
+        >
+          Draw Card
+        </button>
+
+        {/* Player Hand */}
         <div className="player-hand">
           <h4>Hand:</h4>
           {player.hand.map((card, index) => (
@@ -201,30 +251,37 @@ const Board = () => {
               className={`card ${
                 player.selectedCardIndex === index ? "selected" : ""
               }`}
-              style={{ backgroundColor: card.color }}
-              onClick={() => handleSelectCard(playerKey, index)}
+              style={{
+                backgroundColor: card.color,
+                opacity: isPlayerTurn ? 1 : 0.5,
+              }}
+              onClick={() => isPlayerTurn && handleSelectCard(playerKey, index)}
             >
               {card.type}
             </div>
           ))}
         </div>
+
+        {/* Player Board Grid */}
         <div className="board-grid">
           {player.board.map((slot, index) => (
             <div
               key={index}
               className={`board-cell ${slot ? "occupied" : ""} 
-    ${availableMoves.includes(index) ? "highlight" : ""} 
-    ${player.selectedBoardIndex === index ? "selected" : ""}`}
+                ${availableMoves.includes(index) ? "highlight" : ""} 
+                ${player.selectedBoardIndex === index ? "selected" : ""}`}
               style={{
                 backgroundColor: slot ? slot.color : "transparent",
                 border: availableMoves.includes(index) ? "2px solid green" : "",
+                opacity: isPlayerTurn ? 1 : 0.5,
               }}
               onClick={() =>
-                availableMoves.includes(index)
+                isPlayerTurn &&
+                (availableMoves.includes(index)
                   ? handleMoveCard(playerKey, index)
                   : slot
                   ? handleSelectBoardCard(playerKey, index)
-                  : handlePlaceCard(playerKey, index)
+                  : handlePlaceCard(playerKey, index))
               }
             >
               {slot ? slot.type : `Slot ${index + 1}`}
