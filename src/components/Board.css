@@ -36,8 +36,10 @@
   margin: 5px;
 }
 
-.card.selected {
-  outline: 2px solid gold;
+.card.selected,
+.board-cell.selected {
+  outline: 3px solid #ffd700; /* Green glow effect */
+  box-shadow: 0 0 10px #ffd700;
 }
 
 .player-hand {

@@ -8,11 +8,12 @@ const shuffleDeck = (deck) => {
 
 const Board = () => {
   const initialPlayerState = () => ({
-    deck: shuffleDeck(createDeck()), // Unique shuffled deck for each player
+    deck: shuffleDeck(createDeck()),
     hand: [],
     board: Array(9).fill(null),
     actions: 3,
     selectedCardIndex: null,
+    selectedBoardIndex: null, // Tracks selected card on board for movement
   });
 
   const [players, setPlayers] = useState({
@@ -46,12 +47,24 @@ const Board = () => {
     });
   };
 
-  const handleSelectCard = (player, index) => {
+  const handleSelectCard = (player, index, isBoard = false) => {
     setPlayers((prevPlayers) => ({
       ...prevPlayers,
       [player]: {
         ...prevPlayers[player],
-        selectedCardIndex: index,
+        selectedCardIndex: isBoard ? null : index, // Select from hand
+        selectedBoardIndex: isBoard ? index : null, // Select from board
+      },
+    }));
+  };
+
+  const handleSelectBoardCard = (player, index) => {
+    setPlayers((prevPlayers) => ({
+      ...prevPlayers,
+      [player]: {
+        ...prevPlayers[player],
+        selectedBoardIndex: index,
+        selectedCardIndex: null, // Deselect any hand card
       },
     }));
   };
@@ -87,31 +100,88 @@ const Board = () => {
     }
   };
 
+  const handleMoveCard = (player, newIndex) => {
+    setPlayers((prevPlayers) => {
+      const currentPlayer = prevPlayers[player];
+      const { board, actions, selectedBoardIndex } = currentPlayer;
+
+      if (actions > 0 && selectedBoardIndex !== null) {
+        const newBoard = [...board];
+        newBoard[newIndex] = newBoard[selectedBoardIndex]; // Move card
+        newBoard[selectedBoardIndex] = null; // Clear old spot
+
+        return {
+          ...prevPlayers,
+          [player]: {
+            ...prevPlayers[player],
+            board: newBoard,
+            actions: actions - 1,
+            selectedBoardIndex: null, // Deselect after moving
+          },
+        };
+      }
+      return prevPlayers;
+    });
+  };
+
   const handleDrawCard = (player) => {
     setPlayers((prevPlayers) => {
       const currentPlayer = prevPlayers[player];
       const { deck, hand, actions } = currentPlayer;
 
-      if (actions > 0 && deck.length > 0 && hand.length < 5) {
-        const newCard = deck[0];
+      if (deck.length > 0 && actions > 0) {
         return {
           ...prevPlayers,
           [player]: {
             ...currentPlayer,
-            hand: [...hand, newCard],
-            deck: deck.slice(1),
-            actions: actions - 1,
+            hand: [...hand, deck[0]], // Add top deck card to hand
+            deck: deck.slice(1), // Remove top card from deck
+            actions: actions - 1, // Deduct one action
           },
         };
       } else {
-        alert(actions === 0 ? "No actions remaining!" : "Hand limit reached!");
-        return prevPlayers;
+        alert(
+          deck.length === 0 ? "No cards left in deck!" : "No actions remaining!"
+        );
+      }
+      return prevPlayers;
+    });
+  };
+
+  const getAvailableMoves = (board, index) => {
+    const moves = [];
+    const row = Math.floor(index / 3);
+    const col = index % 3;
+
+    const directions = [
+      { rowOffset: -1, colOffset: 0 }, // Up
+      { rowOffset: 1, colOffset: 0 }, // Down
+      { rowOffset: 0, colOffset: -1 }, // Left
+      { rowOffset: 0, colOffset: 1 }, // Right
+    ];
+
+    directions.forEach(({ rowOffset, colOffset }) => {
+      const newRow = row + rowOffset;
+      const newCol = col + colOffset;
+      const newIndex = newRow * 3 + newCol;
+
+      if (newRow >= 0 && newRow < 3 && newCol >= 0 && newCol < 3) {
+        if (board[newIndex] === null) {
+          moves.push(newIndex);
+        }
       }
     });
+
+    return moves;
   };
 
   const renderPlayerSection = (playerKey) => {
     const player = players[playerKey];
+    const availableMoves =
+      player.selectedBoardIndex !== null
+        ? getAvailableMoves(player.board, player.selectedBoardIndex)
+        : [];
+
     return (
       <div className="player-section">
         <h2>{playerKey === "player1" ? "Player 1" : "Player 2"}</h2>
@@ -136,9 +206,20 @@ const Board = () => {
           {player.board.map((slot, index) => (
             <div
               key={index}
-              className={`board-cell ${slot ? "occupied" : ""}`}
-              style={{ backgroundColor: slot ? slot.color : "transparent" }}
-              onClick={() => handlePlaceCard(playerKey, index)}
+              className={`board-cell ${slot ? "occupied" : ""} 
+    ${availableMoves.includes(index) ? "highlight" : ""} 
+    ${player.selectedBoardIndex === index ? "selected" : ""}`}
+              style={{
+                backgroundColor: slot ? slot.color : "transparent",
+                border: availableMoves.includes(index) ? "2px solid green" : "",
+              }}
+              onClick={() =>
+                availableMoves.includes(index)
+                  ? handleMoveCard(playerKey, index)
+                  : slot
+                  ? handleSelectBoardCard(playerKey, index)
+                  : handlePlaceCard(playerKey, index)
+              }
             >
               {slot ? slot.type : `Slot ${index + 1}`}
             </div>
