@@ -11,7 +11,7 @@ const Board = () => {
     deck: shuffleDeck(createDeck()),
     hand: [],
     board: Array(9).fill(null),
-    actions: 3,
+    actions: 900,
     selectedCardIndex: null,
     selectedBoardIndex: null, // Tracks selected card on board for movement
   });
@@ -47,13 +47,14 @@ const Board = () => {
     });
   };
 
-  const handleSelectCard = (player, index, isBoard = false) => {
+  const handleSelectCard = (player, index) => {
     setPlayers((prevPlayers) => ({
       ...prevPlayers,
       [player]: {
         ...prevPlayers[player],
-        selectedCardIndex: isBoard ? null : index, // Select from hand
-        selectedBoardIndex: isBoard ? index : null, // Select from board
+        selectedCardIndex:
+          prevPlayers[player].selectedCardIndex === index ? null : index, // Toggle selection
+        selectedBoardIndex: null, // Deselect board card when selecting from hand
       },
     }));
   };
@@ -63,8 +64,9 @@ const Board = () => {
       ...prevPlayers,
       [player]: {
         ...prevPlayers[player],
-        selectedBoardIndex: index,
-        selectedCardIndex: null, // Deselect any hand card
+        selectedBoardIndex:
+          prevPlayers[player].selectedBoardIndex === index ? null : index, // Toggle selection
+        selectedCardIndex: null, // Deselect hand card when selecting from board
       },
     }));
   };
