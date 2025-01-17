@@ -131,6 +131,10 @@ const Board = () => {
       const currentPlayer = prevPlayers[player];
       const { deck, hand, actions } = currentPlayer;
 
+      if (hand.length >= 5) {
+        alert("You can only have a maximum of 5 cards in hand!");
+        return prevPlayers; // Prevent drawing if hand is full
+      }
       if (deck.length > 0 && actions > 0) {
         return {
           ...prevPlayers,
