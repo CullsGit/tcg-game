@@ -2,19 +2,18 @@ import React, { useState, useEffect } from "react";
 import "./Board.css";
 import { createDeck } from "../data/deckData";
 
-const shuffleDeck = (deck) => {
-  return [...deck].sort(() => Math.random() - 0.5);
-};
-
 const Board = () => {
-  const initialPlayerState = () => ({
-    deck: shuffleDeck(createDeck()),
-    hand: [],
-    board: Array(9).fill(null),
-    actions: 3,
-    selectedCardIndex: null,
-    selectedBoardIndex: null, // Tracks selected card on board for movement
-  });
+  const initialPlayerState = () => {
+    const deck = createDeck();
+    return {
+      deck: deck.slice(3), // Remove 3 cards from deck
+      hand: deck.slice(0, 3), // Take the first 3 cards for the hand
+      board: Array(9).fill(null),
+      actions: 30,
+      selectedCardIndex: null,
+      selectedBoardIndex: null,
+    };
+  };
 
   const [players, setPlayers] = useState({
     player1: initialPlayerState(),
@@ -22,15 +21,6 @@ const Board = () => {
   });
 
   const [currentTurn, setCurrentTurn] = useState("player1"); // Player 1 starts
-  const [firstTurn, setFirstTurn] = useState(true);
-
-  useEffect(() => {
-    if (firstTurn) {
-      drawInitialCards("player1");
-      drawInitialCards("player2");
-      setFirstTurn(false);
-    }
-  }, [firstTurn]);
 
   useEffect(() => {
     if (players[currentTurn].actions === 0) {
@@ -147,7 +137,7 @@ const Board = () => {
       const currentPlayer = prevPlayers[player];
       const { deck, hand, actions } = currentPlayer;
 
-      if (hand.length >= 5) {
+      if (hand.length >= 20) {
         alert("You can only have a maximum of 5 cards in hand!");
         return prevPlayers; // Prevent drawing if hand is full
       }
